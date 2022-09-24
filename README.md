@@ -4,6 +4,11 @@
 
 ---
 
+### Version
+
+- v0.2
+
+
 ### New Functions
 
 0. Off State
