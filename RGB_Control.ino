@@ -2,9 +2,11 @@
   RGB Control
   0.1 - three Option
   0.2 - remove display, add attachInterrupt to button
+  0.3 - for loop use voids name, delete display voids and serial stuffs
 */
 
-float version = 0.2;
+
+float version = 0.3;
 
 // ------------------ LEDS ------------------
 // ------------------ LEDS ------------------
@@ -15,8 +17,9 @@ int RED_L = 10;
 int GREEN_L = 11;
 int BLUE_L = 9;
 int *leds[c] = { &RED_L, &GREEN_L, &BLUE_L };
+int *flash[4] = { &RED_L, &RED_L, &BLUE_L, &BLUE_L };
 
-int LedState = 0;  // which state the first 0-3
+int LedState = 0;  // Default state  0 - 5
 int LedSWState = LOW;
 unsigned long prevMillis = 0;
 const int blinkDelay = 100;
@@ -27,50 +30,39 @@ unsigned long prevMillis2 = 0;
 // ------------------ POTM ------------------
 const int potR = A0;
 const int sNum = 10; // Sample number
-void smoothAnalog();
 uint32_t brightness;
-int lastBrightness = 0;
 
 // ------------------ BUTTON ------------------
 // ------------------ BUTTON ------------------
 int ButtonSW = 3;
 bool ButLastState;
-const int maxStates = 3;
+const int maxStates = 6;
 
 // ------------------ VOIDS ------------------
 // ------------------ VOIDS ------------------
+void smoothAnalog();
+
 void sensButton();
 void debounceButton();
-void OnDisplay();
-void OffDisplay();
+
+void offState();
 void firstState();
 void secondState();
 void thirdState();
-void offState();
-void stateDisplay();
+void fourthState();
+void fifthState();
+void sixthState();
 
-bool once = true;
+bool once = true; // offState run once
 
-// ------------------ I2C Oled ------------------
-// ------------------ I2C Oled ------------------
-//#include <SPI.h>
-//#include <Wire.h>
-//#include <Adafruit_GFX.h>
-//#include <Adafruit_SSD1306.h>
-//
-//#define SCREEN_WIDTH 128 // OLED display width, in pixels
-//#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-//
-//// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
-//#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
-//#define SCREEN_ADDRESS 0x3C
-//Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+typedef int (*st) (void);
 
 // ------------------ SETUP ------------------
 // ------------------ SETUP ------------------
 void setup() {
-  //  Serial.begin(115200);
-  //  Serial.println("---RGB--Control---");
+  Serial.begin(115200);
+  Serial.println("--- RGB--Control ---");
+  Serial.println("--- version:"+(String)version+" ---");
 
   for (auto a : leds) {
     pinMode(*a, OUTPUT);
@@ -79,53 +71,37 @@ void setup() {
   pinMode(ButtonSW, INPUT_PULLUP);
   ButLastState = digitalRead(ButtonSW);
   attachInterrupt(digitalPinToInterrupt(ButtonSW), sensButton, FALLING);
-
-  // --------------- OLED ---------------
-  //  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) { // Address 0x3D or 0x3C for 128x64
-  //    Serial.println(F("-- SSD1306 allocation failed --"));
-  //    for (;;);
-  //  }
-
-  // ------------------ INITIAL DISPLAY  ------------------
-
-  //  display.clearDisplay();
-  //  display.setTextSize(2);
-  //  display.setTextColor(WHITE);
-  //  display.setCursor(49, 10);
-  //  display.println("RGB");
-  //  display.setCursor(25, 30);
-  //  display.println("CONTROL");
-  //  display.display();
-  //  delay(10);
-  //  display.clearDisplay();
 }
+// --------------- END SETUP ------------------
+// --------------- END SETUP ------------------
 
 // ------------------ LOOP ------------------
 // ------------------ LOOP ------------------
 void loop() {
+  st states[maxStates + 1];
+  states[0] = &offState;
+  states[1] = &firstState;
+  states[2] = &secondState;
+  states[3] = &thirdState;
+  states[4] = &fourthState;
+  states[5] = &fifthState;
+  states[6] = &sixthState;
 
-  if (LedState == 0) {
-    offState();
+  for (int i = 0; i < maxStates + 1; i++) {
+    while (LedState == i) {
+      states[i]();
+      debounceButton();
+    }
   }
-  if (LedState == 1) {
-    firstState();
-  }
-  if (LedState == 2) {
-    secondState();
-  }
-  if (LedState == 3) {
-    thirdState();
-  }
-
-  debounceButton();
-
 }
+// --------------- END LOOP ------------------
+// --------------- END LOOP ------------------
+
 
 // ------------------ VOIDS ------------------
 // ------------------ VOIDS ------------------
 
-// ------------------ CASES ------------------
-
+// ------------------ STATES ------------------
 void offState() {
   while (once) {
     for (auto a : leds) {
@@ -133,6 +109,7 @@ void offState() {
       delay(5);
     }
     once = false;
+    delay(100);
   }
 }
 
@@ -176,6 +153,36 @@ void thirdState() {
   }
 }
 
+void fourthState() {
+  for (auto a : leds) {
+    digitalWrite(*a, HIGH);
+    delay(250);
+    digitalWrite(*a, LOW);
+    delay(250);
+  }
+}
+
+void fifthState() {
+  for (auto a : flash) {
+    digitalWrite(*a, HIGH);
+    delay(100);
+    digitalWrite(*a, LOW);
+    delay(100);
+  }
+}
+
+void sixthState() {
+  smoothAnalog();
+  if (brightness <= 30) {
+    brightness = 30;
+  }
+  for (auto a : leds) {
+    digitalWrite(*a, HIGH);
+    delay(brightness * 2);
+    digitalWrite(*a, LOW);
+    delay(brightness * 2);
+  }
+}
 
 // ---------------- Smooth Analog ----------------
 void smoothAnalog() {
@@ -186,10 +193,10 @@ void smoothAnalog() {
   }
   raw = int(raw / sNum);
   brightness = map(raw, 0, 810, 0, 255);
-  if (brightness <= 10) {
+  if (brightness <= 4) {
     brightness = 0;
   }
-  if (brightness >= 248) {
+  else if (brightness >= 248) {
     brightness = 255;
   }
 }
@@ -212,25 +219,3 @@ void debounceButton() {
     ButLastState = true;
   }
 }
-
-// ------------------ Displays ------------------
-//void OnDisplay() {
-//  display.clearDisplay();
-//  display.setCursor(1, 25);
-//  display.print("Bright:" + (String)brightness);
-//  display.display();
-//}
-//
-//void OffDisplay() {
-//  display.clearDisplay();
-//  display.setCursor(1, 25);
-//  display.println("Press btn.");
-//  display.display();
-//}
-//
-//void stateDisplay() {
-//  display.clearDisplay();
-//  display.setCursor(10, 25);
-//  display.print((String)LedState);
-//  display.display();
-//}
