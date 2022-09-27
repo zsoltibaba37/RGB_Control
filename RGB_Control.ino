@@ -2,11 +2,11 @@
   RGB Control
   0.1 - three Option
   0.2 - remove display, add attachInterrupt to button
-  0.3 - for loop use voids name, delete display voids and serial stuffs
+  0.3 - Now 6 States, for loop use void names, delete display voids and serial stuffs
+  0.31 - I Simplified the code, to avoid Misunderstood later -> renamed few variable name,
 */
 
-
-float version = 0.3;
+float version = 0.31;
 
 // ------------------ LEDS ------------------
 // ------------------ LEDS ------------------
@@ -19,7 +19,7 @@ int BLUE_L = 9;
 int *leds[c] = { &RED_L, &GREEN_L, &BLUE_L };
 int *flash[4] = { &RED_L, &RED_L, &BLUE_L, &BLUE_L };
 
-int LedState = 0;  // Default state  0 - 5
+int menuState = 0;  // Default state  0 - 5
 int LedSWState = LOW;
 unsigned long prevMillis = 0;
 const int blinkDelay = 100;
@@ -28,7 +28,7 @@ unsigned long prevMillis2 = 0;
 
 // ------------------ POTM ------------------
 // ------------------ POTM ------------------
-const int potR = A0;
+const int potPin = A0;
 const int sNum = 10; // Sample number
 uint32_t brightness;
 
@@ -60,14 +60,16 @@ typedef int (*st) (void);
 // ------------------ SETUP ------------------
 // ------------------ SETUP ------------------
 void setup() {
-  Serial.begin(115200);
-  Serial.println("--- RGB--Control ---");
-  Serial.println("--- version:"+(String)version+" ---");
+//  Serial.begin(115200);
+//  Serial.println("--- RGB--Control ---");
+//  Serial.println("--- version:"+(String)version+" ---");
 
   for (auto a : leds) {
     pinMode(*a, OUTPUT);
   }
 
+  pinMode(potPin, INPUT);
+  
   pinMode(ButtonSW, INPUT_PULLUP);
   ButLastState = digitalRead(ButtonSW);
   attachInterrupt(digitalPinToInterrupt(ButtonSW), sensButton, FALLING);
@@ -88,7 +90,7 @@ void loop() {
   states[6] = &sixthState;
 
   for (int i = 0; i < maxStates + 1; i++) {
-    while (LedState == i) {
+    while (menuState == i) {
       states[i]();
       debounceButton();
     }
@@ -126,12 +128,7 @@ void secondState() {
     unsigned int currentMillis = millis();
     if (currentMillis - prevMillis >= blinkDelay) {
       prevMillis = currentMillis;
-      if (LedSWState == LOW) {
-        LedSWState = HIGH;
-      }
-      else {
-        LedSWState = LOW;
-      }
+      LedSWState = !LedSWState;
       digitalWrite(*a, LedSWState);
     }
   }
@@ -140,14 +137,9 @@ void secondState() {
 void thirdState() {
   for (auto a : leds) {
     unsigned int currentMillis2 = millis();
-    if (currentMillis2 - prevMillis2 >= int(analogRead(potR))) {
+    if (currentMillis2 - prevMillis2 >= int(analogRead(potPin))) {
       prevMillis2 = currentMillis2;
-      if (LedSWState2 == LOW) {
-        LedSWState2 = HIGH;
-      }
-      else {
-        LedSWState2 = LOW;
-      }
+      LedSWState2 = !LedSWState2;
       digitalWrite(*a, LedSWState2);
     }
   }
@@ -188,7 +180,7 @@ void sixthState() {
 void smoothAnalog() {
   uint32_t raw = 0;
   for ( int i = 0; i < sNum; i++ ) {
-    raw += analogRead(potR);
+    raw += analogRead(potPin);
     //delay(1);
   }
   raw = int(raw / sNum);
@@ -205,11 +197,11 @@ void smoothAnalog() {
 // ----------------- Interrupt ----------------
 void sensButton() {
   if ( ButLastState == true ) {
-    LedState++;
+    menuState++;
     once = true;
     ButLastState = false;
-    if ( LedState > maxStates ) {
-      LedState = 0;
+    if ( menuState > maxStates ) {
+      menuState = 0;
     }
   }
 }
