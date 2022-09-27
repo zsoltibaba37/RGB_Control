@@ -1,19 +1,21 @@
-## RGB LED Strip Control
 
-__With__
+<h1 style="text-align:center"><a style="color:red">R</a> <a style="color:green">G</a> <a style="color:blue">B </a> <a style="color:white">- LED Strip Control </a></h1>
+
+
+## __With__
 - [Arduino Nano](https://store.arduino.cc/products/arduino-nano)
 
 <img src="https://cdn.shopify.com/s/files/1/0438/4735/2471/products/A000005_01.iso_643x483.jpg?v=1628695103" alt="NANO" width="200"/>
 
-__+__
+__and__
 
 - [TOSHIBA ULN2803APG](https://www.tme.eu/Document/5d0c0d4b35a4dbdbe085a04733be1a83/ULN2803APG.pdf)
 
-__+__
+__and__
 - one push button
 - one potentiometer
 
-__+__
+__and__
 - 12V 1A power supply
 
 ---
